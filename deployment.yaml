@@ -1,0 +1,64 @@
+#MongoDB is a free and open-source cross-platform 
+#document-oriented database program. Classified as a 
+#NoSQL database program, MongoDB uses JSON-like documents
+#with schemata. 
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb-deployment
+  labels: 
+    app: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo 
+          ports:
+          #This comes from the hub.docker.com image configuration
+          #The MongoDB server in the image listens on the standard MongoDB port
+          - containerPort: 27017
+          env:
+          #These variables, used in conjunction, create a new user and set 
+          #that user's password. 
+          #We will reference them from the secret.yaml so no actual 
+          #values inside the configuration file
+          - name: MONGO_INITDB_ROOT_USERNAME
+            valueFrom:
+              secretKeyRef: 
+                name: mongodb-secret
+                key: mongo-root-username
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef: 
+                name: mongodb-secret
+                key: mongo-root-username
+
+---
+#With this three dots we are just creating a new file inside the same one
+#Here we are going to create an internal service
+#Deployment & Service in 1 file because they belong together
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+spec:
+  selector: 
+    #To connect to Pod through label
+    app: mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      #This is the service port
+      targetPort: 27017
+      #targetPort is the port we are exposing so it has to match with
+      #containerPort--- this two can be different

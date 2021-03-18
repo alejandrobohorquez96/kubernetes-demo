@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-express
+  labels:
+    app: mongo-express
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-express
+  template:
+    metadata:
+      labels:
+        app: mongo-express
+    spec:
+      containers:
+      - name: mongo-express
+        image: mongo-express
+        ports:
+        #This comes from the hub.docker.com image configuration
+        #The MongoDBExpress container listens on the port 8081
+        - containerPort: 8081
+        env:
+        #This is used to authenticate
+        - name: ME_CONFIG_MONGODB_ADMINUSERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongo-root-username
+        - name: ME_CONFIG_MONGODB_ADMINPASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongo-root-password
+        #Which database to connect (server)
+        - name: ME_CONFIG_MONGODB_SERVER
+          valueFrom: 
+            #configmaps are used to store configuration in a centralized 
+            #way so other components can used it too
+            configMapKeyRef:
+              name: mongodb-configmap
+              key: database_url
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-express-service
+spec:
+  selector: 
+    app: mongo-express
+  #This line will make an external service assigning the service 
+  #an external IP adress and so accepts external request
+  type: NodePort
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+      #This is also needed "the port where this external IP adress will
+      #be open, the port needed in the browser to access the service, 
+      #it has a range 30000-–32767
+      nodePort: 30000 
+
